@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>SI 649: School Segregation Visualization</title>
+        <script type="text/javascript" src="data/d3.js"></script>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="images/favicon.png">
+        <link rel="stylesheet" href="css/html5reset.css">
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <a class = "skip" href="#main">Skip to Main Content</a>
+        <header>
+            <nav>
+                <ul>
+                    <li class="active"><a href = "index.html" >Visualization</a></li>
+                    <li><a href = "post.html">Post</a></li>
+                </ul>
+            </nav>
+            <h1>School Segregation</h1>
+        </header>
+
+        <main>
+            <div id="main">
+                <p>The visualizations are based on Nikole Hannah-Jones's article published on the New York Times on June 9, 2016: Choosing a School for My Daughter in a Segregated City - How one school became a battleground over which children benefit from a separate and unequal system. <a href="https://www.nytimes.com/2016/06/12/magazine/choosing-a-school-for-my-daughter-in-a-segregated-city.html">Click to view the full version of Nicole's work.</a></p>
+            </div>
+            <div id="vis1">
+                <h2>Visualization #1: <br>How are American schools segregated in the 21st century?</h2>
+
+                <div class="des">
+                    <h3>Description</h3>
+                    <p>This interactive visualization is a geographical presentation of the segregation ratio marked by different colors in U.S. schools in 2015-16 school year. 157 years after the civil war and 68 years after the Supreme Court's landmark Brown v. Board of Education ruling, we may suppose that segregation in U.S. education systems is no longer a problem. However, this visualization says: it's not true. There is another question here: is the North more civil than the South in education, as most people would assume?</p>
+                </div>
+
+                <div class="top">
+                    <h3>Most Segregated States</h3>
+                    <table id="tb1" border=1 frame=void>
+                        <tr>
+                            <td>District Of Columbia</td>
+                            <td>72.80%</td>
+                            <td class="s">S</td>
+                        </tr>
+                        <tr>
+                            <td>New York</td>
+                            <td>69.87%</td>
+                            <td class="n">N</td>
+                        </tr>
+                        <tr>
+                            <td>Illinois</td>
+                            <td>66.34%</td>
+                            <td class="n">N</td>
+                        </tr>
+                        <tr>
+                            <td>Ohio</td>
+                            <td>66.21%</td>
+                            <td class="n">N</td>
+                        </tr>
+                        <tr>
+                            <td>Tennessee</td>
+                            <td>64.65%</td>
+                            <td class="s">S</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="bottom">
+                    <h3>Most Integrated States</h3>
+                    <table id="tb2" border=1 frame=void>
+                        <tr>
+                            <td>Hawaii</td>
+                            <td>31.26%</td>
+                            <td class="w">W</td>
+                        </tr>
+                        <tr>
+                            <td>Wyoming</td>
+                            <td>35.41%</td>
+                            <td class="w">W</td>
+                        </tr>
+                        <tr>
+                            <td>Montana</td>
+                            <td>36.01%</td>
+                            <td class="w">W</td>
+                        </tr>
+                        <tr>
+                            <td>Vermont</td>
+                            <td>36.28%</td>
+                            <td class="n">N</td>
+                        </tr>
+                        <tr>
+                            <td>North Dakota</td>
+                            <td>38.54%</td>
+                            <td class="n">N</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="button">
+                    <button id="north">Focus North</button>
+                    <button id="south">Focus South</button>
+                    <button id="reset">Nationwide</button> 
+                </div>
+
+                <script type="text/javascript">
+
+                    //Width and height
+                    var w = 800;
+                    var h = 500;
+
+                    var segRange=[0.451158, 0.513793, 0.603782];
+                    var pubRange=[0.784833, 0.836897, 0.877921];
+                    var totRange=[847, 1641, 2867];
+                    var intRange=[5.5, 98, 269];
+
+                    //Define map projection
+                    var projection = d3.geoAlbersUsa()
+                    .translate([0, 0]);
+
+                    var zooming = function(d){
+                        var offset=[d3.event.transform.x, d3.event.transform.y];
+
+                        var newScale=d3.event.transform.k*20000;
+
+                        projection.translate(offset)
+                            .scale(newScale);
+
+                        svg.selectAll("path")
+                            .attr("d", path);
+
+                        svg.selectAll("text.label")
+                            .attr("x", function(d) {
+                            return path.centroid(d)[0];
+                        })
+                            .attr("y", function(d) {
+                            return path.centroid(d)[1];
+                        })
+                            .text(function(d) {
+                            return d.properties.abbr;
+                        })
+                            .style("font-size",Math.round(6*d3.event.transform.k*25)+"px");
+                    }
+
+                    function htmlHandler(value, range){
+                        if (value<range[0]){
+                            return "&darr;&darr;";
+                        }else if(value<range[1]){
+                            return "&darr;";
+                        }else if(value==range[1]){
+                            return "&#8211;";
+                        }else if(value<range[2]){
+                            return "&uarr;"
+                        }else{
+                            return "&uarr;&uarr;"
+                        }
+                    }
+
+                    function colorHandler(value, range){
+                        if(value<range[1]){
+                            return "#91bfdb";
+                        }else if(value==range[1]){
+                            return "lightgray";
+                        }else{
+                            return "#fc8d59";
+                        }
+                    }
+
+                    function clickHandler(d, i) {
+                        d3.select("#state").text(`${d.properties.name} · `).style("color", "black");
+                        d3.select("#region").text(`${d.properties.region}`).style("color", function(){
+                            if (`${d.properties.region}`=="North"){
+                                return "#D90882";
+                            }
+                            else if (`${d.properties.region}`=="South"){
+                                return "#0060C7";
+                            }
+                            else{
+                                return "#575757";
+                            }
+                        });
+                        d3.select("#ratio p:first-child").text(`${(d.properties.value*100).toFixed(2)}%`);
+                        d3.select("#ratio p:last-child").html(htmlHandler(`${d.properties.value}`, segRange))
+                            .style("color", colorHandler(`${d.properties.value}`, segRange))
+                            .style("font-weight", "1000");
+                        d3.select("#total p:first-child").text(`${parseInt(d.properties.total)}`);
+                        d3.select("#total p:last-child").html(htmlHandler(`${d.properties.total}`, totRange))
+                            .style("color", colorHandler(`${d.properties.total}`, totRange))
+                            .style("font-weight", "1000");
+                        d3.select("#public p:first-child").text(`${(d.properties.public*100).toFixed(2)}%`);
+                        d3.select("#public p:last-child").html(htmlHandler(`${d.properties.public}`, pubRange))
+                            .style("color", colorHandler(`${d.properties.public}`, pubRange))
+                            .style("font-weight", "1000");
+                        d3.select("#intense p:first-child").text(`${parseInt(d.properties.intense)}`);
+                        d3.select("#intense p:last-child").html(htmlHandler(`${d.properties.intense}`, intRange))
+                            .style("color", colorHandler(`${d.properties.intense}`, intRange))
+                            .style("font-weight", "1000");
+                    }
+
+                    function mouseOutHandler(d, i) {
+                        d3.select(this).style("fill", function(d){
+                            //Get data value
+                            var value = d.properties.value;
+
+                            if (value) {
+                                //If value exists…
+                                return colors(value);
+                            } else {
+                                //If value is undefined…
+                                return "#ccc";
+                            }
+                        });
+                        d3.select(this).style("cursor", "auto");
+                    }
+                    function mouseOverHandler(d, i) {
+                        d3.select(this).style("fill", "lightblue");
+                        d3.select(this).style("cursor", "pointer");
+                    }
+
+                    //Define path generator
+                    var path = d3.geoPath()
+                    .projection(projection);
+
+                    var colorArray=['rgb(215,48,39)','rgb(244,109,67)','rgb(253,174,97)','rgb(254,224,139)','rgb(255,255,191)','rgb(217,239,139)','rgb(166,217,106)','rgb(102,189,99)','rgb(26,152,80)'].reverse()
+
+                    var colors = d3.scaleQuantize()
+                    .range(colorArray);
+                    //Colors taken from colorbrewer.js, included in the D3 download
+
+                    //Create SVG element
+                    var svg = d3.select("#vis1")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h)
+                    .attr("class", "vis");
+
+                    var zoom = d3.zoom()
+                    .scaleExtent([ 0.03, 0.3 ])
+                    .on("zoom", zooming)
+
+                    var map = svg.append("g")
+                    .attr("id", "map")
+                    .call(zoom)
+                    .call(zoom.transform, 
+                          d3.zoomIdentity
+                          .translate(w/2, h/2)
+                          .scale([0.05]));
+
+                    map.append("rect")
+                        .attr("x", 0)
+                        .attr("y", 0)
+                        .attr("width", w)
+                        .attr("height", h)
+                        .attr("opacity", 0)
+                        .style("pointer-events", "none");
+
+                    //Load in GeoJSON data
+                    d3.csv("data/final_1.csv", function(data){
+                        //Set input domain for color scale
+                        colors.domain([
+                            d3.min(data, function(d) { return d.Segregation; }), 
+                            d3.max(data, function(d) { return d.Segregation; })
+                        ]);
+
+                        d3.json("data/us-states.json", function(json) {
+
+                            //Merge the ag. data and GeoJSON
+                            //Loop through once for each ag. data value
+                            for (var i = 0; i < data.length; i++) {
+
+                                var dataState = data[i].State_Name;				//Grab state name
+                                var dataAbbr = data[i].State_Abbr;
+                                var dataTotal=data[i].Total;
+                                var dataPublic=data[i].Public_School;
+                                var dataIntense=data[i].Intensely_Segregated_School;
+                                var dataValue = parseFloat(data[i].Segregation);	//Grab data value, and convert from string to float
+
+                                //Find the corresponding state inside the GeoJSON
+                                for (var j = 0; j < json.features.length; j++) {
+
+                                    var jsonState = json.features[j].properties.name;
+
+                                    if (dataState == jsonState) {
+
+                                        //Copy the data value into the JSON
+                                        json.features[j].properties.value = dataValue;
+                                        json.features[j].properties.abbr = dataAbbr;
+                                        json.features[j].properties.total = dataTotal;
+                                        json.features[j].properties.public = dataPublic;
+                                        json.features[j].properties.intense = dataIntense;
+                                        json.features[j].properties.state = dataState;
+                                        //Stop looking through the JSON
+
+                                        if (["Connecticut", "Illinois", "Indiana", "Iowa", "Kansas", "Maine", "Massachusetts", "Michigan", "Minnesota", "Missouri", "Nebraska", "New Hampshire", "New Jersey", "New York", "North Dakota", "Ohio", "Pennsylvania", "Rhode Island", "South Dakota", "Vermont", "Wisconsin"].indexOf(jsonState) >= 0){
+                                            json.features[j].properties.region="North";
+                                        }else if (["Alabama", "Arkansas", "Delaware", "District of Columbia", "Florida", "Georgia", "Kentucky", "Louisiana", "Maryland", "Mississippi", "North Carolina", "Oklahoma", "South Carolina", "Tennessee", "Texas", "Virginia", "West Virginia"].indexOf(jsonState) >= 0){
+                                            json.features[j].properties.region="South";
+                                        }else{
+                                            json.features[j].properties.region="West";
+                                        };
+
+                                        break;
+                                    }
+                                }		
+                            }
+
+                            //Bind data and create one path per GeoJSON feature
+                            map.selectAll("path")
+                                .data(json.features)
+                                .enter()
+                                .append("path")
+                                .attr("d", path)
+                                .style("fill", function(d){
+                                //Get data value
+                                var value = d.properties.value;
+
+                                if (value) {
+                                    //If value exists…
+                                    return colors(value);
+                                } else {
+                                    //If value is undefined…
+                                    return "#ccc";
+                                }
+                            })  
+                                .attr("stroke", "#FFF")
+                                .attr("stroke-width", 0.5)
+                                .on("mouseover", mouseOverHandler)
+                                .on("mouseout", mouseOutHandler)
+                                .on("click", clickHandler);
+
+                            map.selectAll("text")
+                                .data(json.features)
+                                .enter()
+                                .append("text")
+                                .attr("class", "label")
+                                .attr("x", function(d) {
+                                return path.centroid(d)[0];
+                            })
+                                .attr("y", function(d) {
+                                return path.centroid(d)[1];
+                            })
+                                .text(function(d) {
+                                return d.properties.abbr;
+                            })
+                                .style("pointer-events", "none")
+                                .style("font-size",Math.round(6*0.05*25)+"px");
+                        });
+                        createPanButtons();
+                        createZoomButtons();
+                    });
+
+                    //Create panning buttons
+                    var createPanButtons = function() {
+
+                        //Create the clickable groups
+
+                        //North
+                        var north = svg.append("g")
+                        .attr("class", "pan")	//All share the 'pan' class
+                        .attr("id", "north");	//The ID will tell us which direction to head
+
+                        north.append("rect")
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .attr("width", w)
+                            .attr("height", 30);
+
+                        north.append("text")
+                            .attr("x", w/2)
+                            .attr("y", 20)
+                            .html("&uArr;")
+
+                        //South
+                        var south = svg.append("g")
+                        .attr("class", "pan")
+                        .attr("id", "south");
+
+                        south.append("rect")
+                            .attr("x", 0)
+                            .attr("y", h - 30)
+                            .attr("width", w)
+                            .attr("height", 30);
+
+                        south.append("text")
+                            .attr("x", w/2)
+                            .attr("y", h - 10)
+                            .html("&dArr;")
+
+                        //West
+                        var west = svg.append("g")
+                        .attr("class", "pan")
+                        .attr("id", "west");
+
+                        west.append("rect")
+                            .attr("x", 0)
+                            .attr("y", 30)
+                            .attr("width", 30)
+                            .attr("height", h - 60);
+
+                        west.append("text")
+                            .attr("x", 15)
+                            .attr("y", h/2)
+                            .html("&lArr;")
+
+                        //East
+                        var east = svg.append("g")
+                        .attr("class", "pan")
+                        .attr("id", "east");
+
+                        east.append("rect")
+                            .attr("x", w - 30)
+                            .attr("y", 30)
+                            .attr("width", 30)
+                            .attr("height", h - 60);
+
+                        east.append("text")
+                            .attr("x", w - 15)
+                            .attr("y", h/2)
+                            .html("&rArr;")
+
+                        //Panning interaction
+
+                        d3.selectAll(".pan")
+                            .on("click", function() {
+
+                            //Set how much to move on each click
+                            var moveAmount = 500;
+
+                            //Set x/y to zero for now
+                            var x = 0;
+                            var y = 0;
+
+                            //Which way are we headed?
+                            var direction = d3.select(this).attr("id");
+
+                            //Modify the offset, depending on the direction
+                            switch (direction) {
+                                case "north":
+                                    y += moveAmount;  //Increase y offset
+                                    break;
+                                case "south":
+                                    y -= moveAmount;  //Decrease y offset
+                                    break;
+                                case "west":
+                                    x += moveAmount;  //Increase x offset
+                                    break;
+                                case "east":
+                                    x -= moveAmount;  //Decrease x offset
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            //This triggers a zoom event, translating by x, y
+                            map.transition()
+                                .call(zoom.translateBy, x, y);
+
+                        });
+
+                    };
+
+                    //Create zoom buttons
+                    var createZoomButtons = function() {
+
+                        //Create the clickable groups
+
+                        //Zoom in button
+                        var zoomIn = svg.append("g")
+                        .attr("class", "zoom")	//All share the 'zoom' class
+                        .attr("id", "in")		//The ID will tell us which direction to head
+                        .attr("transform", "translate(" + (w - 110) + "," + (h - 70) + ")");
+
+                        zoomIn.append("rect")
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .attr("width", 30)
+                            .attr("height", 30);
+
+                        zoomIn.append("text")
+                            .attr("x", 15)
+                            .attr("y", 20)
+                            .text("+");
+
+                        //Zoom out button
+                        var zoomOut = svg.append("g")
+                        .attr("class", "zoom")
+                        .attr("id", "out")
+                        .attr("transform", "translate(" + (w - 70) + "," + (h - 70) + ")");
+
+                        zoomOut.append("rect")
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .attr("width", 30)
+                            .attr("height", 30);
+
+                        zoomOut.append("text")
+                            .attr("x", 15)
+                            .attr("y", 20)
+                            .html("&ndash;");
+
+                        //Zooming interaction
+
+                        d3.selectAll(".zoom")
+                            .on("click", function() {
+
+                            //Set how much to scale on each click
+                            var scaleFactor;
+
+                            //Which way are we headed?
+                            var direction = d3.select(this).attr("id");
+
+                            //Modify the k scale value, depending on the direction
+                            switch (direction) {
+                                case "in":
+                                    scaleFactor = 1.5;
+                                    break;
+                                case "out":
+                                    scaleFactor = 0.75;
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            //This triggers a zoom event, scaling by 'scaleFactor'
+                            map.transition()
+                                .call(zoom.scaleBy, scaleFactor);
+
+                        });
+
+                    };
+
+                    d3.select("#north")
+                        .on("click", function(){
+                        map.transition()
+                            .call(zoom.transform, d3.zoomIdentity
+                                  .translate(w/2, h/2)
+                                  .scale(0.08)
+                                  .translate(-2600, 1500));
+
+                        map.selectAll("path")
+                            .transition()
+                            .style("fill", function(d){
+                            //Get data value
+                            var value = d.properties.value;
+                            var name = d.properties.name;
+                            var region = d.properties.region;
+
+                            if (value && (region=="North")) {
+                                //If value exists…
+                                return colors(value);
+                            } else {
+                                //If value is undefined…
+                                return "#ccc";
+                            }
+                        });
+                    });
+
+                    d3.select("#south")
+                        .on("click", function(){
+                        map.transition()
+                            .call(zoom.transform, d3.zoomIdentity
+                                  .translate(w/2, h/2)
+                                  .scale(0.08)
+                                  .translate(-1600, -1800));
+
+                        map.selectAll("path")
+                            .transition()
+                            .style("fill", function(d){
+                            //Get data value
+                            var value = d.properties.value;
+                            var region = d.properties.region;
+                            var name = d.properties.name;
+
+                            if (value && (region=="South")) {
+                                //If value exists…
+                                return colors(value);
+                            } else {
+                                //If value is undefined…
+                                return "#ccc";
+                            }
+                        });
+                    });
+
+                    d3.select("#reset")
+                        .on("click", function(){
+                        map.transition()
+                            .call(zoom.transform, d3.zoomIdentity
+                                  .translate(w/2, h/2)
+                                  .scale(0.05));
+                        map.selectAll("path")
+                            .transition()
+                            .style("fill", function(d){
+                            //Get data value
+                            var value = d.properties.value;
+
+                            if (value) {
+                                //If value exists…
+                                return colors(value);
+                            } else {
+                                //If value is undefined…
+                                return "#ccc";
+                            }
+                        })
+                    });
+
+                    var legend=d3.select("#vis1")
+                    .append("svg")
+                    .attr("width", 200)
+                    .attr("height", 70)
+                    .attr("class", "legend");
+
+                    var size=20;
+
+                    legend.selectAll("myrects")
+                        .data(colorArray)
+                        .enter()
+                        .append("rect")
+                        .attr("y", 10)
+                        .attr("x", function(d,i){ return 20+i*(size)})
+                        .attr("width", size)
+                        .attr("height", size)
+                        .style("fill", function(d){ return d})
+
+                    legend.append("text")
+                        .attr("y", 40)
+                        .attr("x", 110)
+                        .style("alignment-baseline", "middle")
+                        .text("Integrated ↔ Segregated")
+                </script>
+
+
+                <div class="intro">
+                    <h3 id="state" style="color:#FC28FB">🖱️ Click A State </h3>
+                    <p id="region" style="color:#FC28FB">To Start!</p>
+                    <p>Segregation Ratio:</p>
+                    <div id="ratio">
+                        <p></p>
+                        <p></p>
+                    </div>
+                    <p>"Intensely" Segregated School #:</p>
+                    <div id="intense">
+                        <p></p>
+                        <p></p>
+                    </div>
+                    <p>Public School (%):</p>
+                    <div id="public">
+                        <p></p>
+                        <p></p>
+                    </div>
+                    <p>Total School #:</p>
+                    <div id="total">
+                        <p></p>
+                        <p></p>
+                    </div>
+                </div>
+                <div class="footnote">
+                    <h4>Footnote: the Segregation Ratio</h4>
+                    <p>I adopted the segregation ratio defined in the article: <a href="https://www.urban.org/sites/default/files/publication/101101/when_is_a_school_segregated_making_sense_of_segregation_65_years_after_brown_v._board_of_education_0.pdf">When Is a School Segregated? Making Sense of Segregation 65 Years after Brown v. Board of Education</a> and made some modifications.</p>
+                    <p>The equation used in this visualization is: <img src="images/eq1.svg" alt=""/>,</p>
+                    <p>where <img src="images/eq2.svg" alt=""/> indexes schools, <img src="images/eq3.svg" alt=""/> is the share of school <img src="images/eq4.svg" alt=""/>'s students that are Black or Hispanic; <img src="images/eq5.svg" alt=""/> is the share of students that are Black or Hispanic in the state as a whole. Measured using the dissimilarity index, segregation can be intepreted as the schools that need to change to create a perfectly integrated school system, relative to the share that would have to change to achieve the same goal but starting from a perfectly segregated school system.</p>
+                </div>
+                
+                <div class="ref">
+                    <h4>References</h4>
+                    <a href="https://www.nytimes.com/2016/06/12/magazine/choosing-a-school-for-my-daughter-in-a-segregated-city.html">Choosing a School for My Daughter in a Segregated City: How one school became a battleground over which children benefit from a separate and unequal system</a>
+                    <a href="https://nces.ed.gov/datatools/">National-level data on all public and private schools</a>
+                    <a href="https://www.urban.org/sites/default/files/publication/101101/when_is_a_school_segregated_making_sense_of_segregation_65_years_after_brown_v._board_of_education_0.pdf">When Is a School Segregated? Making Sense of Segregation 65 Years after Brown v. Board of Education</a>
+                </div>
+            </div>
+
+            <div id="vis2">
+                <h2>Visualization #2: <br>Segregated education in China: a bird’s-eye view of residential segregation</h2>
+
+                <div class="des2">
+                    <h3>Education Segregated by Geography</h3>
+                    <h4>Kindergarten, Beijing, 2017</h4>
+                </div>
+
+                <div id="garten">
+                    <img src="images/kinder.svg" alt="Kindergarten numbers: 1232, 140, 23" width=50%/>
+                    <p>City # &nbsp;&nbsp;&nbsp;Township #&nbsp;&nbsp;&nbsp;Village #</p>
+                    <p>Kindergartens</p>
+                </div>
+                <div id="students">
+                    <img src="images/pupil.svg" alt="pupil numbers: 13330, 1225, 1255" width=50%/>
+                    <p>City # &nbsp;&nbsp;&nbsp;Township #&nbsp;&nbsp;&nbsp;Village #</p>
+                    <p>Pupils</p>
+                </div>
+
+                <div id="p1">
+                    <h5># of students you'll give individual attention to, if you are a <strong>teacher</strong> in ...</h5>
+                    <p>City</p>
+                    <p>Township</p>
+                    <p>Village </p>
+                    <img src="images/city.png" alt="" width=97px; />
+                    <img src="images/town.png" alt="" width=97px; />
+                    <img src="images/village.png" alt="" width=97px; />
+                    <img src="images/P1.svg" alt="Teacher student ratio in city, township, and village: 11.47, 13.59, 13.77" width=300px/>
+                </div>
+
+                <div id="p2">
+                    <h5># of students you'll give individual attention to, if you are a <strong>doctor</strong> in ...</h5>
+                    <p>City</p>
+                    <p>Township</p>
+                    <p>Village </p>
+                    <img src="images/city.png" alt="" width=97px; />
+                    <img src="images/town.png" alt="" width=97px; />
+                    <img src="images/village.png" alt="" width=97px; />
+                    <img src="images/P2.svg" alt="Doctor student ratio in city, township, and village: 144.11, 242.94, 244.85" width=300px/>
+                </div>
+
+                <div class="des3">
+                    <h3>Education, the Hukou System, and Segregation</h3>
+                    <p>The proposal the author Nicole mentioned in the article that “All things being equal, with no history of discrimination, it might well be desirable to assign pupils to schools nearest their homes” is what is carried out in China now. However, given the dual structure of urban-rural separation and the ensuing residential inequity, the effectiveness of this policy remains uncertain and debatable. Unlike schools in America, public schools in China have better educational resources and lower tuitions compared to private schools. According to <a href="https://cn.nytimes.com/education/20130917/cc17kindergarten/">this New York Times article about kindergarten school choice in Beijing</a>, if parents want to send their children to public kindergartens in their neighborhood, they should provide four certificates, for example: “Beijing Xicheng District Household Registration Certificate, Xicheng District Liren Street Community Property Certificate, Only Child Certificate, Birth Certificate”. The first two certificates ensure the child’s hukou, i.e., geographical privilege. </p>
+
+                    <p>The Chinese government promulgated the Regulations of the People's Republic of China on Hukou Registration in January 1958, formally establishing the Hukou system of household registration and marking the beginning of strict control over the free movement of population and free migration in China. The initial motivation of setting up the Hukou system is to achieve progressive urbanization. Although China is releasing restrictions on settling in cities other than individual mega-cities in recent years, such settlings are still highly determined by individuals’ socioeconomic status and education level, which induces a closed-loop in school segregation. Till now, teaching quality in urban and public kindergartens is still significantly higher than that in rural and private ones. As of 2009, of the 70 model kindergartens in Beijing, 52 (74%) were in the six urban districts (Dongcheng, Xicheng, Chaoyang, Haidian, Fengtai, and Shijingshan).</p>
+                </div>
+
+                <div class="ref">
+                    <h4>References</h4>
+                    <a href="https://data.beijing.gov.cn//zyml/ajg/stjj/12502.htm">北京市数据开放平台：幼儿园基本情况（2017年）</a>
+                    <p>Beijing Open Data Platform: Basic Information on Kindergartens (2017)</p>
+                    <a href="https://cn.nytimes.com/education/20130917/cc17kindergarten/">如何挤进北京公立幼儿园</a>
+                    <p>How to squeeze into a public kindergarten in Beijing</p>
+                    <a href="http://www.cikd.org/chinese/detail?leafId=216&docId=1564">中国户籍制度的演变逻辑：适应经济社会形势渐进放宽人口流动控制</a>
+                    <p>The evolutionary logic of China's household registration system: adapting to the economic and social situation by progressively relaxing the control of population movement</p>
+                </div>
+            </div> 
+        </main>
+        <footer>
+            <p>Ruotong Gao &copy; 2022</p>
+        </footer>
+    </body>
+</html>
